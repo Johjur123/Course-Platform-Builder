@@ -1,0 +1,218 @@
+Project: Secure Video Course Platform (MVP)
+
+🎯 DOEL
+
+Bouw een afgeschermd leerplatform waar gebruikers na login toegang krijgen tot modules met video’s, hun voortgang kunnen bijhouden, en geen video’s kunnen downloaden.
+
+Marketingwebsite en verkoop gebeuren extern.
+Deze app is alleen het platform na login.
+
+🧱 TECH STACK (verplicht)
+
+Framework: Next.js (App Router)
+
+Auth: Supabase Auth (email + magic link)
+
+Database: Supabase Postgres
+
+Payments: Stripe (one-time payment, geen abonnement)
+
+Video hosting: Vimeo (embed only, domain protected)
+
+Hosting: Vercel-compatible
+
+Styling: Tailwind CSS
+
+State: Server Components + minimal client state
+
+🔐 SECURITY & TOEGANG
+
+Alleen ingelogde users mogen de cursuspagina’s zien
+
+Video’s worden:
+
+alleen embedded via Vimeo
+
+geen downloadknoppen
+
+alleen geladen na auth-check
+
+Geen directe video URLs in frontend zichtbaar
+
+Gebruik .env voor alle secrets
+
+📦 FUNCTIONELE EISEN
+1️⃣ Authenticatie
+
+Login / logout
+
+Magic link via e-mail
+
+User blijft ingelogd bij refresh
+
+2️⃣ Toegang na betaling
+
+Stripe one-time payment
+
+Na succesvolle betaling:
+
+user krijgt has_access = true
+
+Gebruik Stripe webhook om dit te verwerken
+
+3️⃣ Cursusstructuur
+
+Eén cursus (voor MVP)
+
+Bestaat uit:
+
+modules
+
+lessen (video’s)
+
+Database schema:
+
+users
+- id
+- email
+- has_access (boolean)
+
+courses
+- id
+- title
+
+modules
+- id
+- course_id
+- title
+- order
+
+lessons
+- id
+- module_id
+- title
+- vimeo_id
+- order
+
+user_progress
+- user_id
+- lesson_id
+- completed (boolean)
+- completed_at
+
+4️⃣ Video weergave
+
+Video’s worden via Vimeo iframe embedded
+
+Gebruik Vimeo Player API
+
+Geen download optie
+
+Autoplay uit
+
+Fullscreen toegestaan
+
+5️⃣ Voortgang bijhouden
+
+Per les:
+
+checkbox “Markeer als bekeken”
+
+Checkbox:
+
+schrijft weg naar user_progress
+
+Bij opnieuw laden:
+
+status wordt opgehaald uit DB
+
+Toon per module:
+
+voortgangsbalk (% bekeken)
+
+6️⃣ UX / Pagina’s
+/login
+
+Inloggen via e-mail
+
+Korte tekst + CTA
+
+/dashboard
+
+Overzicht cursus
+
+Modules + lessen
+
+Voortgang zichtbaar
+
+/lesson/[id]
+
+Videospeler
+
+Titel + korte uitleg
+
+Checkbox “Voltooid”
+
+🎨 UX PRINCIPES
+
+Rustig
+
+Juridisch neutraal
+
+Geen gamification
+
+Geen comments / community
+
+Focus op overzicht & controle
+
+⚠️ DISCLAIMERS
+
+Voeg een vaste disclaimer toe in footer:
+
+“Deze content is informatief en geen juridisch advies.”
+
+🧪 RANDVOORWAARDEN
+
+Geen mobiele app
+
+Geen abonnementen
+
+Geen admin UI nodig (data mag via Supabase worden beheerd)
+
+Code moet:
+
+leesbaar
+
+modulair
+
+uitbreidbaar zijn
+
+🧠 EXTRA INSTRUCTIES VOOR REPLIT
+
+Bouw eerst core flow, dan pas polish
+
+Houd het simpel
+
+Geen externe LMS tools gebruiken
+
+Gebruik duidelijke comments in code
+
+Lever werkende MVP, geen demo-mock
+
+✅ DEFINITIE VAN “KLAAR”
+
+User kan:
+
+inloggen
+
+betalen
+
+cursus bekijken
+
+video’s afspelen
+
+voortgang opslaan
+
+Video’s zijn niet downloadbaar
+
+Toegang is afgeschermd
