@@ -25,31 +25,43 @@ export class DatabaseStorage implements IStorage {
     if (courseRows.length === 0) return undefined;
 
     const course = courseRows[0];
-    
-    const moduleRows = await db
-      .select()
-      .from(modules)
-      .where(eq(modules.courseId, course.id))
-      .orderBy(asc(modules.order));
 
-    const modulesWithLessons: ModuleWithLessons[] = [];
-    
-    for (const mod of moduleRows) {
-      const lessonRows = await db
-        .select()
-        .from(lessons)
-        .where(eq(lessons.moduleId, mod.id))
-        .orderBy(asc(lessons.order));
-      
-      modulesWithLessons.push({
-        ...mod,
-        lessons: lessonRows,
-      });
+    const rows = await db
+      .select({
+        module: modules,
+        lesson: lessons,
+      })
+      .from(modules)
+      .leftJoin(lessons, eq(lessons.moduleId, modules.id))
+      .where(eq(modules.courseId, course.id))
+      .orderBy(asc(modules.order), asc(lessons.order));
+
+    const modulesMap = new Map<number, ModuleWithLessons>();
+
+    for (const row of rows) {
+      if (!modulesMap.has(row.module.id)) {
+        modulesMap.set(row.module.id, {
+          ...row.module,
+          lessons: [],
+        });
+      }
+
+      if (row.lesson) {
+        const mod = modulesMap.get(row.module.id)!;
+        if (!mod.lessons.some(l => l.id === row.lesson!.id)) {
+          mod.lessons.push(row.lesson);
+        }
+      }
+    }
+
+    const sortedModules = Array.from(modulesMap.values()).sort((a, b) => a.order - b.order);
+    for (const mod of sortedModules) {
+      mod.lessons.sort((a, b) => a.order - b.order);
     }
 
     return {
       ...course,
-      modules: modulesWithLessons,
+      modules: sortedModules,
     };
   }
 
@@ -118,27 +130,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async setLessonProgress(userId: string, lessonId: number, completed: boolean): Promise<UserProgress> {
-    const existing = await db
-      .select()
-      .from(userProgress)
-      .where(and(
-        eq(userProgress.userId, userId),
-        eq(userProgress.lessonId, lessonId)
-      ));
-
-    if (existing.length > 0) {
-      const [updated] = await db
-        .update(userProgress)
-        .set({
-          completed,
-          completedAt: completed ? new Date() : null,
-        })
-        .where(eq(userProgress.id, existing[0].id))
-        .returning();
-      return updated;
-    }
-
-    const [created] = await db
+    const [result] = await db
       .insert(userProgress)
       .values({
         userId,
@@ -146,8 +138,15 @@ export class DatabaseStorage implements IStorage {
         completed,
         completedAt: completed ? new Date() : null,
       })
+      .onConflictDoUpdate({
+        target: [userProgress.userId, userProgress.lessonId],
+        set: {
+          completed,
+          completedAt: completed ? new Date() : null,
+        },
+      })
       .returning();
-    return created;
+    return result;
   }
 
   async getUserAccess(userId: string): Promise<UserAccess | undefined> {

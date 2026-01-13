@@ -1,0 +1,160 @@
+Context
+
+Het videocursusplatform is functioneel af, maar er zijn kritieke en aanbevolen verbeteringen geïdentificeerd tijdens een senior code review.
+Doel van deze opdracht: het platform live-klaar maken, zonder nieuwe features toe te voegen.
+
+Belangrijk:
+
+Geen redesign
+
+Geen nieuwe UX
+
+Alleen gerichte fixes zoals hieronder beschreven
+
+🔴 KRITIEK — VERPLICHT OP TE LOSSEN (blokkeert livegang)
+1️⃣ Stripe webhook: harde betaling/product-validatie
+
+Probleem
+De huidige Stripe-webhook controleert alleen payment_status en verleent toegang zonder te verifiëren:
+
+juiste product / cursus
+
+juiste prijs (€99)
+
+juiste valuta (EUR)
+
+Dit vormt een direct financieel en entitlement-risico.
+
+Aanpassing vereist
+
+In server/webhookHandlers.ts:
+
+Valideer expliciet:
+
+amount_total === 9900
+
+currency === "eur"
+
+(optioneel maar aanbevolen) metadata.course_id === expected_course_id
+
+Verleen pas toegang (hasAccess = true) als alle checks slagen
+
+Negeer:
+
+unpaid sessions
+
+incomplete payments
+
+onbekende products / metadata
+
+Waarom
+
+Voorkomt onterechte toegang bij:
+
+toekomstige meerdere cursussen
+
+handmatige Stripe-sessies
+
+foutieve of gemanipuleerde webhooks
+
+🟠 VERBETERINGEN — STERK AANBEVOLEN
+2️⃣ Voorkom dubbele voortgangsrecords (race conditions)
+
+In shared/schema.ts:
+
+Voeg een unique constraint toe op:
+
+(user_id, lesson_id)
+
+
+Voeg een index toe op:
+
+user_id
+
+
+Waarom
+
+Voorkomt dubbele rows bij:
+
+snel klikken
+
+refresh
+
+netwerkvertraging
+
+Verbetert performance bij progress queries
+
+3️⃣ Vermijd N+1 queries bij cursus ophalen
+
+In server/storage.ts:
+
+Haal course + modules + lessons op via één query (joins)
+
+Assembleer de geneste structuur in memory
+
+Vermijd losse queries per module of per les
+
+Waarom
+
+Schaalbaar bij:
+
+meer modules
+
+meer lessen
+
+meerdere cursussen
+
+Voorkomt performanceproblemen later
+
+4️⃣ Verhoog CSRF-hygiëne op auth-cookie
+
+In server/replit_integrations/auth/replitAuth.ts:
+
+Stel sameSite expliciet in op:
+
+lax (of strict als dit geen flows breekt)
+
+Waarom
+
+Extra bescherming tegen CSRF op auth-sessies
+
+Best practice voor productie
+
+🟢 NIET AANPASSEN (ter info)
+
+De volgende onderdelen zijn correct geïmplementeerd en hoeven niet gewijzigd te worden:
+
+API-routes zijn correct afgeschermd met auth + hasAccess
+
+Les deep-links zonder toegang zijn geblokkeerd
+
+Zod-validatie op voortgangsupdates is correct
+
+Vimeo wordt veilig embedded zonder downloadlinks
+
+Dashboard toont geen cursusdata zonder toegang
+
+👉 Deze onderdelen bewust laten zoals ze zijn.
+
+✅ DEFINITIE VAN KLAAR
+
+De opdracht is afgerond wanneer:
+
+Stripe-webhook alleen toegang verleent na volledig gevalideerde betaling
+
+user_progress geen duplicaten kan bevatten
+
+Cursusdata efficiënt wordt opgehaald
+
+Auth-cookie expliciet sameSite heeft
+
+Bestaande functionaliteit ongewijzigd blijft
+
+Na deze fixes moet het platform:
+➡️ Live-klaar MVP zijn voor betalende gebruikers.
+
+⚠️ BELANGRIJK
+
+Geen extra features toevoegen
+
+Geen abstrahering “voor later”
